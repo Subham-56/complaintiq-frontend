@@ -10,7 +10,12 @@ import '../services/api_service.dart';
 import '../theme/app_theme.dart';
 
 class ReportScreen extends StatefulWidget {
-  const ReportScreen({super.key});
+  const ReportScreen({super.key, this.onSubmitted});
+
+  /// Called after a complaint is successfully submitted (whether it was
+  /// accepted as Pending or flagged Under Review) — lets the parent shell
+  /// switch to the "My Complaints" tab so the citizen sees it right away.
+  final VoidCallback? onSubmitted;
 
   @override
   State<ReportScreen> createState() => _ReportScreenState();
@@ -190,21 +195,24 @@ class _ReportScreenState extends State<ReportScreen> {
 
       if (!mounted) return;
 
-      final isValid = result['is_valid'] == true;
       final message = result['message']?.toString() ?? "Complaint submitted";
 
       _showSnack(message);
 
-      if (isValid) {
-        setState(() {
-          _descriptionController.clear();
-          _selectedImageFile = null;
-          _selectedImageBytes = null;
-          _selectedImageName = null;
-          _latitude = null;
-          _longitude = null;
-        });
-      }
+      // The complaint was successfully created either way (whether it
+      // landed as Pending or got flagged Under Review) — clear the form
+      // and hand off to the parent shell to switch to "My Complaints"
+      // so the citizen sees what they just submitted right away.
+      setState(() {
+        _descriptionController.clear();
+        _selectedImageFile = null;
+        _selectedImageBytes = null;
+        _selectedImageName = null;
+        _latitude = null;
+        _longitude = null;
+      });
+
+      widget.onSubmitted?.call();
     } catch (e) {
       _showSnack(e.toString().replaceFirst('Exception: ', ''));
     } finally {

@@ -3,6 +3,8 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
+import 'package:mime/mime.dart';
 
 import '../config/config.dart';
 import 'session_service.dart';
@@ -76,6 +78,21 @@ class ApiService {
     throw Exception(_extractErrorMessage(response, "Registration failed"));
   }
 
+  /// Determines the MIME type for an image being uploaded, falling back to
+  /// image/jpeg if detection fails (e.g. missing/ambiguous extension).
+  /// This MUST be set explicitly — http.MultipartFile does not infer
+  /// content-type from the filename or bytes on its own, and the backend
+  /// rejects uploads that don't declare a real image/* content-type.
+  static MediaType _resolveImageMediaType(String? filename, Uint8List? bytes) {
+    final mimeType =
+        lookupMimeType(filename ?? '', headerBytes: bytes) ?? 'image/jpeg';
+    final parts = mimeType.split('/');
+    if (parts.length == 2) {
+      return MediaType(parts[0], parts[1]);
+    }
+    return MediaType('image', 'jpeg');
+  }
+
   static Future<Map<String, dynamic>> submitComplaint({
     required String description,
     required double latitude,
@@ -96,16 +113,24 @@ class ApiService {
     request.fields["longitude"] = longitude.toString();
 
     if (kIsWeb && imageBytes != null) {
+      final filename = imageName ?? "complaint.jpg";
       request.files.add(
         http.MultipartFile.fromBytes(
           "file",
           imageBytes,
-          filename: imageName ?? "complaint.jpg",
+          filename: filename,
+          contentType: _resolveImageMediaType(filename, imageBytes),
         ),
       );
     } else if (imageFile != null) {
+      final bytes = await imageFile.readAsBytes();
       request.files.add(
-        await http.MultipartFile.fromPath("file", imageFile.path),
+        http.MultipartFile.fromBytes(
+          "file",
+          bytes,
+          filename: imageFile.path.split(Platform.pathSeparator).last,
+          contentType: _resolveImageMediaType(imageFile.path, bytes),
+        ),
       );
     }
 

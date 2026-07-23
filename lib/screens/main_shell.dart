@@ -80,7 +80,7 @@ class _MainShellState extends State<MainShell> {
         'Report Issue',
         Icons.add_circle_outline,
         Icons.add_circle_rounded,
-        const ReportScreen(),
+        ReportScreen(onSubmitted: () => setState(() => _selectedIndex = 3)),
       ),
       _NavItem(
         'Community',

@@ -78,8 +78,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                 final statusCounts = Map<String, dynamic>.from(
                   data['status_counts'] as Map,
                 );
-                final categoryCounts = Map<String, dynamic>.from(
-                  data['category_counts'] as Map,
+                final departmentCounts = Map<String, dynamic>.from(
+                  data['department_counts'] as Map,
                 );
                 final topUpvoted = (data['top_upvoted'] as List)
                     .map((e) => Map<String, dynamic>.from(e as Map))
@@ -131,7 +131,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                         children: [
                           Expanded(child: _statusBreakdown(statusCounts)),
                           const SizedBox(width: 16),
-                          Expanded(child: _categoryBreakdown(categoryCounts)),
+                          Expanded(child: _departmentBreakdown(departmentCounts)),
                         ],
                       ),
                       const SizedBox(height: 24),
@@ -254,7 +254,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     );
   }
 
-  Widget _categoryBreakdown(Map<String, dynamic> counts) {
+  Widget _departmentBreakdown(Map<String, dynamic> counts) {
     final sorted = counts.entries.toList()
       ..sort((a, b) => (b.value as int).compareTo(a.value as int));
 
@@ -269,7 +269,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Top Categories',
+            'Top Departments',
             style: TextStyle(
               color: AppTheme.textPrimary,
               fontWeight: FontWeight.w700,

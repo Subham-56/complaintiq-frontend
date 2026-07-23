@@ -216,7 +216,7 @@ class _RecentCard extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  (complaint['ai_category'] ??
+                  (complaint['ai_department'] ??
                           complaint['issue_type'] ??
                           'Unknown')
                       .toString(),

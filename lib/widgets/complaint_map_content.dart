@@ -84,7 +84,7 @@ class _ComplaintMapContentState extends State<ComplaintMapContent> {
                   initialCenter: LatLng(20.2961, 85.8245),
                   initialZoom: 13,
                   minZoom: 10,
-                  maxZoom: 18,
+                  maxZoom: 30,
                 ),
                 children: [
                   TileLayer(
@@ -145,7 +145,7 @@ class _ComplaintMapContentState extends State<ComplaintMapContent> {
                           children: [
                             Expanded(
                               child: Text(
-                                (_selected!['ai_category'] ??
+                                (_selected!['ai_department'] ??
                                         _selected!['issue_type'] ??
                                         '')
                                     .toString(),

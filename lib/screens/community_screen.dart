@@ -13,16 +13,24 @@ class CommunityScreen extends StatefulWidget {
 }
 
 class _CommunityScreenState extends State<CommunityScreen> {
-  late Future<List<dynamic>> _future;
+  late Future<List<Map<String, dynamic>>> _future;
 
   @override
   void initState() {
     super.initState();
-    _future = ApiService.getCommunityFeed();
+    _future = _load();
+  }
+
+  Future<List<Map<String, dynamic>>> _load() async {
+    final raw = await ApiService.getCommunityFeed();
+    // Cast (not clone) so the SAME map objects persist across rebuilds.
+    // Cloning with Map.from() here would create fresh copies on every
+    // build, silently discarding any in-place mutation from an upvote tap.
+    return raw.map((e) => e as Map<String, dynamic>).toList();
   }
 
   void _reload() {
-    setState(() => _future = ApiService.getCommunityFeed());
+    setState(() => _future = _load());
   }
 
   Future<void> _handleUpvote(Map<String, dynamic> complaint) async {
@@ -34,7 +42,6 @@ class _CommunityScreenState extends State<CommunityScreen> {
       setState(() {
         complaint['upvote_count'] = result['upvote_count'];
         complaint['user_has_upvoted'] = result['user_has_upvoted'];
-        _future = ApiService.getCommunityFeed();
       });
     } catch (e) {
       if (!mounted) return;
@@ -69,7 +76,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
           ),
           const SizedBox(height: 20),
           Expanded(
-            child: FutureBuilder<List<dynamic>>(
+            child: FutureBuilder<List<Map<String, dynamic>>>(
               future: _future,
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -90,9 +97,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                   );
                 }
 
-                final complaints = (snapshot.data ?? [])
-                    .map((c) => Map<String, dynamic>.from(c as Map))
-                    .toList();
+                final complaints = snapshot.data ?? [];
 
                 if (complaints.isEmpty) {
                   return const StateFeedback(
@@ -113,6 +118,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                   itemBuilder: (context, index) {
                     final c = complaints[index];
                     return _FeedCard(
+                      key: ValueKey(c['id']),
                       complaint: c,
                       onUpvote: () => _handleUpvote(c),
                     );
@@ -128,7 +134,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
 }
 
 class _FeedCard extends StatelessWidget {
-  const _FeedCard({required this.complaint, required this.onUpvote});
+  const _FeedCard({super.key, required this.complaint, required this.onUpvote});
 
   final Map<String, dynamic> complaint;
   final VoidCallback onUpvote;
@@ -168,7 +174,7 @@ class _FeedCard extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          (complaint['ai_category'] ??
+                          (complaint['ai_department'] ??
                                   complaint['issue_type'] ??
                                   'Unknown')
                               .toString(),
@@ -186,19 +192,17 @@ class _FeedCard extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 6),
-                  Expanded(
-                    child: Text(
-                      (complaint['description'] ?? '').toString(),
-                      style: const TextStyle(
-                        color: AppTheme.textSecondary,
-                        fontSize: 13,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+                  Text(
+                    (complaint['description'] ?? '').toString(),
+                    style: const TextStyle(
+                      color: AppTheme.textSecondary,
+                      fontSize: 13,
                     ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  if (aiUrgency != null) ...[
-                    const SizedBox(height: 8),
+                  const SizedBox(height: 8),
+                  if (aiUrgency != null)
                     Row(
                       children: [
                         Icon(
@@ -216,8 +220,28 @@ class _FeedCard extends StatelessWidget {
                           ),
                         ),
                       ],
+                    )
+                  else
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.hourglass_empty_rounded,
+                          size: 14,
+                          color: AppTheme.textSecondary,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          complaint['status']?.toString() == 'Under Review'
+                              ? 'AWAITING AI REVIEW'
+                              : 'NOT YET CLASSIFIED',
+                          style: const TextStyle(
+                            color: AppTheme.textSecondary,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
                   const Spacer(),
                   Row(
                     children: [

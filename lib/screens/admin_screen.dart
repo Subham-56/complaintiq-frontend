@@ -73,7 +73,7 @@ class _AdminScreenState extends State<AdminScreen> {
                       const SizedBox(height: 16),
                     ],
                     Text(
-                      (complaint['ai_category'] ??
+                      (complaint['ai_department'] ??
                               complaint['issue_type'] ??
                               '')
                           .toString(),
@@ -285,7 +285,7 @@ class _AdminScreenState extends State<AdminScreen> {
                                   children: [
                                     Expanded(
                                       child: Text(
-                                        (c['ai_category'] ??
+                                        (c['ai_department'] ??
                                                 c['issue_type'] ??
                                                 '')
                                             .toString(),

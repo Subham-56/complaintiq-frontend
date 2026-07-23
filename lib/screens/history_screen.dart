@@ -13,16 +13,23 @@ class HistoryScreen extends StatefulWidget {
 }
 
 class _HistoryScreenState extends State<HistoryScreen> {
-  late Future<List<dynamic>> _future;
+  late Future<List<Map<String, dynamic>>> _future;
 
   @override
   void initState() {
     super.initState();
-    _future = ApiService.getComplaints();
+    _future = _load();
+  }
+
+  Future<List<Map<String, dynamic>>> _load() async {
+    final raw = await ApiService.getComplaints();
+    // Cast (not clone) so the SAME map objects persist across rebuilds —
+    // otherwise an upvote mutation gets discarded on the next rebuild.
+    return raw.map((e) => e as Map<String, dynamic>).toList();
   }
 
   void _reload() {
-    setState(() => _future = ApiService.getComplaints());
+    setState(() => _future = _load());
   }
 
   Future<void> _handleUpvote(Map<String, dynamic> complaint) async {
@@ -34,7 +41,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
       setState(() {
         complaint['upvote_count'] = result['upvote_count'];
         complaint['user_has_upvoted'] = result['user_has_upvoted'];
-        _future = ApiService.getComplaints();
       });
     } catch (e) {
       if (!mounted) return;
@@ -64,7 +70,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
           ),
           const SizedBox(height: 20),
           Expanded(
-            child: FutureBuilder<List<dynamic>>(
+            child: FutureBuilder<List<Map<String, dynamic>>>(
               future: _future,
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -85,9 +91,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   );
                 }
 
-                final complaints = (snapshot.data ?? [])
-                    .map((c) => Map<String, dynamic>.from(c as Map))
-                    .toList();
+                final complaints = snapshot.data ?? [];
 
                 if (complaints.isEmpty) {
                   return const StateFeedback(
@@ -106,9 +110,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   ),
                   itemCount: complaints.length,
                   itemBuilder: (context, index) {
+                    final c = complaints[index];
                     return _ComplaintCard(
-                      complaint: complaints[index],
-                      onUpvote: () => _handleUpvote(complaints[index]),
+                      key: ValueKey(c['id']),
+                      complaint: c,
+                      onUpvote: () => _handleUpvote(c),
                     );
                   },
                 );
@@ -122,7 +128,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
 }
 
 class _ComplaintCard extends StatelessWidget {
-  const _ComplaintCard({required this.complaint, required this.onUpvote});
+  const _ComplaintCard({super.key, required this.complaint, required this.onUpvote});
 
   final Map<String, dynamic> complaint;
   final VoidCallback onUpvote;
@@ -162,7 +168,7 @@ class _ComplaintCard extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          (complaint['ai_category'] ??
+                          (complaint['ai_department'] ??
                                   complaint['issue_type'] ??
                                   'Unknown')
                               .toString(),
@@ -180,19 +186,17 @@ class _ComplaintCard extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 6),
-                  Expanded(
-                    child: Text(
-                      (complaint['description'] ?? '').toString(),
-                      style: const TextStyle(
-                        color: AppTheme.textSecondary,
-                        fontSize: 13,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+                  Text(
+                    (complaint['description'] ?? '').toString(),
+                    style: const TextStyle(
+                      color: AppTheme.textSecondary,
+                      fontSize: 13,
                     ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  if (aiUrgency != null) ...[
-                    const SizedBox(height: 8),
+                  const SizedBox(height: 8),
+                  if (aiUrgency != null)
                     Row(
                       children: [
                         Icon(
@@ -209,25 +213,29 @@ class _ComplaintCard extends StatelessWidget {
                             fontWeight: FontWeight.w700,
                           ),
                         ),
-                        if (complaint['ai_department'] != null) ...[
-                          const Text(
-                            ' · ',
-                            style: TextStyle(color: AppTheme.textSecondary),
+                      ],
+                    )
+                  else
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.hourglass_empty_rounded,
+                          size: 14,
+                          color: AppTheme.textSecondary,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          complaint['status']?.toString() == 'Under Review'
+                              ? 'AWAITING AI REVIEW'
+                              : 'NOT YET CLASSIFIED',
+                          style: const TextStyle(
+                            color: AppTheme.textSecondary,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
                           ),
-                          Expanded(
-                            child: Text(
-                              complaint['ai_department'].toString(),
-                              style: const TextStyle(
-                                color: AppTheme.textSecondary,
-                                fontSize: 10,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
+                        ),
                       ],
                     ),
-                  ],
                   const Spacer(),
                   Row(
                     children: [
